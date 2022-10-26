@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="Gradle: com.mapbox.mapboxsdk:mapbox-sdk-core:5.4.1">
+    <CLASSES>
+      <root url="jar://C:/AndroidSDK/caches/modules-2/files-2.1/com.mapbox.mapboxsdk/mapbox-sdk-core/5.4.1/8140e93947e54b03e8c0fe6f6b058e73903048f9/mapbox-sdk-core-5.4.1.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://C:/AndroidSDK/caches/modules-2/files-2.1/com.mapbox.mapboxsdk/mapbox-sdk-core/5.4.1/5de11943e3f7182a0fea0a7df49c2119ebf363e/mapbox-sdk-core-5.4.1-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://C:/AndroidSDK/caches/modules-2/files-2.1/com.mapbox.mapboxsdk/mapbox-sdk-core/5.4.1/493cd1c85a0aed38162e8727da19954fe92e66b6/mapbox-sdk-core-5.4.1-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

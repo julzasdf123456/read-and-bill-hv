@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/Read_and_Bill_HV.iml" filepath="$PROJECT_DIR$/.idea/modules/Read_and_Bill_HV.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/Read_and_Bill_HV.app.iml" filepath="$PROJECT_DIR$/.idea/modules/app/Read_and_Bill_HV.app.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/Read_and_Bill_HV.app.androidTest.iml" filepath="$PROJECT_DIR$/.idea/modules/app/Read_and_Bill_HV.app.androidTest.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/Read_and_Bill_HV.app.main.iml" filepath="$PROJECT_DIR$/.idea/modules/app/Read_and_Bill_HV.app.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/Read_and_Bill_HV.app.unitTest.iml" filepath="$PROJECT_DIR$/.idea/modules/app/Read_and_Bill_HV.app.unitTest.iml" />
+    </modules>
+  </component>
+</project>

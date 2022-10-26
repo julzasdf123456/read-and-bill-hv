@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="Gradle: com.github.DantSu:ESCPOS-ThermalPrinter-Android:3.2.0@aar">
+    <CLASSES>
+      <root url="jar://C:/AndroidSDK/caches/transforms-3/895ed657305ee2de527bd1a4a42e8e0d/transformed/jetified-ESCPOS-ThermalPrinter-Android-3.2.0/jars/classes.jar!/" />
+      <root url="file://C:/AndroidSDK/caches/transforms-3/895ed657305ee2de527bd1a4a42e8e0d/transformed/jetified-ESCPOS-ThermalPrinter-Android-3.2.0/res" />
+      <root url="file://C:/AndroidSDK/caches/transforms-3/895ed657305ee2de527bd1a4a42e8e0d/transformed/jetified-ESCPOS-ThermalPrinter-Android-3.2.0/AndroidManifest.xml" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
