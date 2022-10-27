@@ -2,11 +2,13 @@ package com.lopez.julz.readandbillhv.adapters;
 
 import android.content.Context;
 import android.content.Intent;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -14,6 +16,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.card.MaterialCardView;
 import com.lopez.julz.readandbillhv.R;
 import com.lopez.julz.readandbillhv.ReadingFormActivity;
+import com.lopez.julz.readandbillhv.ReadingFormNetMeteredActivity;
 import com.lopez.julz.readandbillhv.dao.DownloadedPreviousReadings;
 import com.lopez.julz.readandbillhv.helpers.ObjectHelpers;
 
@@ -24,11 +27,13 @@ public class AccountsListAdapter extends RecyclerView.Adapter<AccountsListAdapte
     public List<DownloadedPreviousReadings> downloadedPreviousReadingsList;
     public Context context;
     public String userId;
+    public boolean clickable;
 
-    public AccountsListAdapter(List<DownloadedPreviousReadings> downloadedPreviousReadingsList, Context context, String userId) {
+    public AccountsListAdapter(List<DownloadedPreviousReadings> downloadedPreviousReadingsList, Context context, String userId, boolean clickable) {
         this.downloadedPreviousReadingsList = downloadedPreviousReadingsList;
         this.context = context;
         this.userId = userId;
+        this.clickable = clickable;
     }
 
     @NonNull
@@ -74,11 +79,29 @@ public class AccountsListAdapter extends RecyclerView.Adapter<AccountsListAdapte
         holder.accountParent.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Intent intent = new Intent(context, ReadingFormActivity.class);
-                intent.putExtra("ID", downloadedPreviousReadings.getId());
-                intent.putExtra("SERVICEPERIOD", downloadedPreviousReadings.getServicePeriod());
-                intent.putExtra("USERID", userId);
-                context.startActivity(intent);
+                if (clickable) {
+                    if (downloadedPreviousReadings.getNetMetered() != null && downloadedPreviousReadings.getNetMetered().equals("Yes")) {
+                        /**
+                         * PROCEED TO NET METERED READING
+                         */
+                        Intent intent = new Intent(context, ReadingFormNetMeteredActivity.class);
+                        intent.putExtra("ID", downloadedPreviousReadings.getId());
+                        intent.putExtra("SERVICEPERIOD", downloadedPreviousReadings.getServicePeriod());
+                        intent.putExtra("USERID", userId);
+                        context.startActivity(intent);
+                    } else {
+                        /**
+                         * PROCEED TO HV READING
+                         */
+                        Intent intent = new Intent(context, ReadingFormActivity.class);
+                        intent.putExtra("ID", downloadedPreviousReadings.getId());
+                        intent.putExtra("SERVICEPERIOD", downloadedPreviousReadings.getServicePeriod());
+                        intent.putExtra("USERID", userId);
+                        context.startActivity(intent);
+                    }
+                } else {
+                    Toast.makeText(context, "Action not allowed", Toast.LENGTH_SHORT).show();
+                }
             }
         });
     }

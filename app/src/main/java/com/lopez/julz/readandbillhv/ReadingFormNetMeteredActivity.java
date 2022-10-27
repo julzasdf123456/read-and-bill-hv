@@ -1,7 +1,17 @@
 package com.lopez.julz.readandbillhv;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.PopupMenu;
+import androidx.appcompat.widget.Toolbar;
+import androidx.constraintlayout.widget.Constraints;
+import androidx.core.content.FileProvider;
+import androidx.recyclerview.widget.RecyclerView;
+import androidx.room.Room;
+
 import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothDevice;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -24,31 +34,24 @@ import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.PopupMenu;
-import androidx.appcompat.widget.Toolbar;
-import androidx.constraintlayout.widget.Constraints;
-import androidx.core.content.FileProvider;
-import androidx.room.Room;
-
 import com.dantsu.escposprinter.EscPosPrinter;
 import com.dantsu.escposprinter.connection.bluetooth.BluetoothPrintersConnections;
 import com.dantsu.escposprinter.exceptions.EscPosBarcodeException;
 import com.dantsu.escposprinter.exceptions.EscPosConnectionException;
 import com.dantsu.escposprinter.exceptions.EscPosEncodingException;
 import com.dantsu.escposprinter.exceptions.EscPosParserException;
-import com.epson.epos2.printer.Printer;
 import com.google.android.flexbox.FlexboxLayout;
 import com.google.android.material.button.MaterialButton;
 import com.google.gson.JsonParser;
+import com.lopez.julz.readandbillhv.adapters.ReadingListAdapter;
+import com.lopez.julz.readandbillhv.api.RequestPlaceHolder;
+import com.lopez.julz.readandbillhv.api.RetrofitBuilder;
 import com.lopez.julz.readandbillhv.dao.AppDatabase;
 import com.lopez.julz.readandbillhv.dao.Bills;
 import com.lopez.julz.readandbillhv.dao.DownloadedPreviousReadings;
 import com.lopez.julz.readandbillhv.dao.Rates;
 import com.lopez.julz.readandbillhv.dao.ReadingImages;
+import com.lopez.julz.readandbillhv.dao.ReadingSchedules;
 import com.lopez.julz.readandbillhv.dao.Readings;
 import com.lopez.julz.readandbillhv.dao.Users;
 import com.lopez.julz.readandbillhv.helpers.AlertHelpers;
@@ -80,7 +83,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-public class ReadingFormActivity extends AppCompatActivity implements OnMapReadyCallback, PermissionsListener {
+public class ReadingFormNetMeteredActivity  extends AppCompatActivity implements OnMapReadyCallback, PermissionsListener {
 
     public Toolbar toolbarReadingForm;
     public TextView accountName, accountNumber;
@@ -96,15 +99,15 @@ public class ReadingFormActivity extends AppCompatActivity implements OnMapReady
     public Rates currentRate;
     public Readings currentReading;
     public Bills currentBill;
-    public Double kwhConsumed;
+    public Double kwhConsumed, kwhExportConsumed;
     public String readingId;
     public Users user;
 
     /**
      * FORM
      */
-    public EditText prevReading, presReading, demandReading, notes;
-    public TextView kwhUsed, accountType, rate, sequenceCode, accountStatus, coreloss, multiplier, seniorCitizen, currentArrears, totalArrears, additionalKwh, meterNo, katas, prepayment, percent2, percent5;
+    public EditText prevReading, presReading, demandReading, exportReading, prevReadingExport, notes;
+    public TextView kwhUsed, kwhExportUsed, accountType, rate, sequenceCode, accountStatus, coreloss, multiplier, seniorCitizen, currentArrears, totalArrears, additionalKwh, meterNo, katas, prepayment, percent2, percent5;
     public MaterialButton billBtn, nextBtn, prevBtn, takePhotoButton, printBtn, saveOnlyBtn;
     public RadioGroup fieldStatus;
 
@@ -136,7 +139,7 @@ public class ReadingFormActivity extends AppCompatActivity implements OnMapReady
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Mapbox.getInstance(this, getString(R.string.mapbox_access_token));
-        setContentView(R.layout.activity_reading_form);
+        setContentView(R.layout.activity_reading_form_net_metered);
 
         db = Room.databaseBuilder(this, AppDatabase.class, ObjectHelpers.dbName()).fallbackToDestructiveMigration().build();
 
@@ -182,12 +185,16 @@ public class ReadingFormActivity extends AppCompatActivity implements OnMapReady
         percent2 = findViewById(R.id.percent2);
         percent5 = findViewById(R.id.percent5);
         demandReading = findViewById(R.id.demandReading);
+        exportReading = findViewById(R.id.exportReading);
+        prevReadingExport = findViewById(R.id.prevReadingExport);
+        kwhExportUsed = findViewById(R.id.kwhExportUsed);
+
+        prevBtn.setVisibility(View.GONE);
+        nextBtn.setVisibility(View.GONE);
 
         presReading.requestFocus();
 
         printBtn.setVisibility(View.GONE);
-        prevBtn.setVisibility(View.GONE);
-        nextBtn.setVisibility(View.GONE);
 
         fieldStatus.setVisibility(View.GONE);
         takePhotoButton.setVisibility(View.GONE);
@@ -225,11 +232,13 @@ public class ReadingFormActivity extends AppCompatActivity implements OnMapReady
             public void onClick(View view) {
                 try {
                     Object presReadingInput = presReading.getText();
-                    if (presReadingInput != null) {
+                    Object solarExportInput = exportReading.getText();
+                    if (presReadingInput != null && solarExportInput != null) {
                         kwhConsumed = Double.valueOf(ReadingHelpers.getKwhUsed(currentDpr, Double.valueOf(presReadingInput.toString())));
+                        kwhExportConsumed = Double.valueOf(ReadingHelpers.getKwhExportUsed(currentDpr, Double.valueOf(solarExportInput.toString())));
 
                         if (kwhConsumed < 0) {
-                            AlertDialog.Builder builder = new AlertDialog.Builder(ReadingFormActivity.this);
+                            AlertDialog.Builder builder = new AlertDialog.Builder(ReadingFormNetMeteredActivity.this);
                             builder.setTitle("Change Meter or Reset")
                                     .setMessage("You inputted a negative amount. Verify if this reading is correct and the meter has been changed or reset.")
                                     .setPositiveButton("CHANGE METER", new DialogInterface.OnClickListener() {
@@ -244,6 +253,7 @@ public class ReadingFormActivity extends AppCompatActivity implements OnMapReady
                                             reading.setServicePeriod(servicePeriod);
                                             reading.setReadingTimestamp(ObjectHelpers.getCurrentTimestamp());
                                             reading.setKwhUsed(presReadingInput.toString());
+                                            reading.setSolarKwhUsed(kwhExportConsumed + "");
                                             reading.setDemandKwhUsed(demandReading.getText() != null  | !demandReading.getText().toString().isEmpty()  ? demandReading.getText().toString() : "0");
                                             reading.setFieldStatus("CHANGE METER");
                                             reading.setNotes(notes.getText().toString());
@@ -281,6 +291,7 @@ public class ReadingFormActivity extends AppCompatActivity implements OnMapReady
                                             reading.setServicePeriod(servicePeriod);
                                             reading.setReadingTimestamp(ObjectHelpers.getCurrentTimestamp());
                                             reading.setKwhUsed(presReadingInput.toString());
+                                            reading.setSolarKwhUsed(kwhExportConsumed + "");
                                             reading.setDemandKwhUsed(demandReading.getText() != null  | !demandReading.getText().toString().isEmpty()  ? demandReading.getText().toString() : "0");
                                             reading.setFieldStatus("RESET");
                                             reading.setNotes(notes.getText().toString());
@@ -318,6 +329,7 @@ public class ReadingFormActivity extends AppCompatActivity implements OnMapReady
                             reading.setServicePeriod(servicePeriod);
                             reading.setReadingTimestamp(ObjectHelpers.getCurrentTimestamp());
                             reading.setKwhUsed(presReadingInput.toString());
+                            reading.setSolarKwhUsed(kwhExportConsumed + "");
                             reading.setDemandKwhUsed(demandReading.getText() != null  | !demandReading.getText().toString().isEmpty()  ? demandReading.getText().toString() : "0");
                             reading.setNotes(notes.getText().toString());
                             reading.setFieldStatus(ObjectHelpers.getSelectedTextFromRadioGroup(fieldStatus, getWindow().getDecorView()));
@@ -336,7 +348,7 @@ public class ReadingFormActivity extends AppCompatActivity implements OnMapReady
                         } else {
                             String prevKwh = currentDpr.getKwhUsed() != null ? (currentDpr.getKwhUsed().length() > 0 ? currentDpr.getKwhUsed() : "0") : "0";
                             if (kwhConsumed > (Double.valueOf(prevKwh) * 2) && Double.valueOf(prevKwh) > 0) {
-                                AlertDialog.Builder builder = new AlertDialog.Builder(ReadingFormActivity.this);
+                                AlertDialog.Builder builder = new AlertDialog.Builder(ReadingFormNetMeteredActivity.this);
                                 builder.setTitle("WARNING")
                                         .setMessage("This consumer's power usage has increased by " + ObjectHelpers.roundTwo(((kwhConsumed / Double.valueOf(prevKwh)) * 100)) + "%. Do you wish to proceed?")
                                         .setNegativeButton("REVIEW READING", new DialogInterface.OnClickListener() {
@@ -357,6 +369,7 @@ public class ReadingFormActivity extends AppCompatActivity implements OnMapReady
                                                 reading.setServicePeriod(servicePeriod);
                                                 reading.setReadingTimestamp(ObjectHelpers.getCurrentTimestamp());
                                                 reading.setKwhUsed(presReadingInput.toString());
+                                                reading.setSolarKwhUsed(kwhExportConsumed + "");
                                                 reading.setDemandKwhUsed(demandReading.getText() != null  | !demandReading.getText().toString().isEmpty()  ? demandReading.getText().toString() : "0");
                                                 reading.setNotes(notes.getText().toString());
                                                 reading.setFieldStatus("OVERREADING");
@@ -372,7 +385,7 @@ public class ReadingFormActivity extends AppCompatActivity implements OnMapReady
                                                     }
                                                 }
                                                 new ReadAndBill().execute(reading);
-                                                Toast.makeText(ReadingFormActivity.this, "Billed successfully", Toast.LENGTH_SHORT).show();
+                                                Toast.makeText(ReadingFormNetMeteredActivity.this, "Billed successfully", Toast.LENGTH_SHORT).show();
                                             }
                                         });
 
@@ -387,6 +400,7 @@ public class ReadingFormActivity extends AppCompatActivity implements OnMapReady
                                 reading.setServicePeriod(servicePeriod);
                                 reading.setReadingTimestamp(ObjectHelpers.getCurrentTimestamp());
                                 reading.setKwhUsed(presReadingInput.toString());
+                                reading.setSolarKwhUsed(kwhExportConsumed + "");
                                 reading.setDemandKwhUsed(demandReading.getText() != null  | !demandReading.getText().toString().isEmpty()  ? demandReading.getText().toString() : "0");
                                 reading.setNotes(notes.getText().toString());
                                 reading.setUploadStatus("UPLOADABLE");
@@ -401,17 +415,17 @@ public class ReadingFormActivity extends AppCompatActivity implements OnMapReady
                                     }
                                 }
                                 new ReadAndBill().execute(reading);
-                                Toast.makeText(ReadingFormActivity.this, "Billed successfully", Toast.LENGTH_SHORT).show();
+                                Toast.makeText(ReadingFormNetMeteredActivity.this, "Billed successfully", Toast.LENGTH_SHORT).show();
                             }
 
                         }
                     } else {
-                        Toast.makeText(ReadingFormActivity.this, "No inputted present reading!", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(ReadingFormNetMeteredActivity.this, "No inputted import and export reading!", Toast.LENGTH_SHORT).show();
                     }
                 } catch (Exception e) {
                     Log.e("ERR_COMP", e.getMessage());
                     e.printStackTrace();
-                    Toast.makeText(ReadingFormActivity.this, "No inputted present reading!", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(ReadingFormNetMeteredActivity.this, "No inputted import and export reading!", Toast.LENGTH_SHORT).show();
                 }
             }
         });
@@ -421,11 +435,13 @@ public class ReadingFormActivity extends AppCompatActivity implements OnMapReady
             public void onClick(View view) {
                 try {
                     Object presReadingInput = presReading.getText();
-                    if (presReadingInput != null) {
+                    Object solarExportInput = exportReading.getText();
+                    if (presReadingInput != null && solarExportInput != null) {
                         kwhConsumed = Double.valueOf(ReadingHelpers.getKwhUsed(currentDpr, Double.valueOf(presReadingInput.toString())));
+                        kwhExportConsumed = Double.valueOf(ReadingHelpers.getKwhExportUsed(currentDpr, Double.valueOf(solarExportInput.toString())));
 
                         if (kwhConsumed < 0) {
-                            AlertDialog.Builder builder = new AlertDialog.Builder(ReadingFormActivity.this);
+                            AlertDialog.Builder builder = new AlertDialog.Builder(ReadingFormNetMeteredActivity.this);
                             builder.setTitle("Change Meter or Reset")
                                     .setMessage("You inputted a negative amount. Verify if this reading is correct and the meter has been changed or reset.")
                                     .setPositiveButton("CHANGE METER", new DialogInterface.OnClickListener() {
@@ -440,6 +456,7 @@ public class ReadingFormActivity extends AppCompatActivity implements OnMapReady
                                             reading.setServicePeriod(servicePeriod);
                                             reading.setReadingTimestamp(ObjectHelpers.getCurrentTimestamp());
                                             reading.setKwhUsed(presReadingInput.toString());
+                                            reading.setSolarKwhUsed(kwhExportConsumed + "");
                                             reading.setDemandKwhUsed(demandReading.getText() != null  | !demandReading.getText().toString().isEmpty()  ? demandReading.getText().toString() : "0");
                                             reading.setFieldStatus("CHANGE METER");
                                             reading.setNotes(notes.getText().toString());
@@ -477,6 +494,7 @@ public class ReadingFormActivity extends AppCompatActivity implements OnMapReady
                                             reading.setServicePeriod(servicePeriod);
                                             reading.setReadingTimestamp(ObjectHelpers.getCurrentTimestamp());
                                             reading.setKwhUsed(presReadingInput.toString());
+                                            reading.setSolarKwhUsed(kwhExportConsumed + "");
                                             reading.setDemandKwhUsed(demandReading.getText() != null  | !demandReading.getText().toString().isEmpty()  ? demandReading.getText().toString() : "0");
                                             reading.setFieldStatus("RESET");
                                             reading.setNotes(notes.getText().toString());
@@ -514,6 +532,7 @@ public class ReadingFormActivity extends AppCompatActivity implements OnMapReady
                             reading.setServicePeriod(servicePeriod);
                             reading.setReadingTimestamp(ObjectHelpers.getCurrentTimestamp());
                             reading.setKwhUsed(presReadingInput.toString());
+                            reading.setSolarKwhUsed(kwhExportConsumed + "");
                             reading.setDemandKwhUsed(demandReading.getText() != null  | !demandReading.getText().toString().isEmpty()  ? demandReading.getText().toString() : "0");
                             reading.setNotes(notes.getText().toString());
                             reading.setFieldStatus(ObjectHelpers.getSelectedTextFromRadioGroup(fieldStatus, getWindow().getDecorView()));
@@ -532,7 +551,7 @@ public class ReadingFormActivity extends AppCompatActivity implements OnMapReady
                         } else {
                             String prevKwh = currentDpr.getKwhUsed() != null ? (currentDpr.getKwhUsed().length() > 0 ? currentDpr.getKwhUsed() : "0") : "0";
                             if (kwhConsumed > (Double.valueOf(prevKwh) * 2) && Double.valueOf(prevKwh) > 0) {
-                                AlertDialog.Builder builder = new AlertDialog.Builder(ReadingFormActivity.this);
+                                AlertDialog.Builder builder = new AlertDialog.Builder(ReadingFormNetMeteredActivity.this);
                                 builder.setTitle("WARNING")
                                         .setMessage("This consumer's power usage has increased by " + ObjectHelpers.roundTwo(((kwhConsumed / Double.valueOf(prevKwh)) * 100)) + "%. Do you wish to proceed?")
                                         .setNegativeButton("REVIEW READING", new DialogInterface.OnClickListener() {
@@ -553,6 +572,7 @@ public class ReadingFormActivity extends AppCompatActivity implements OnMapReady
                                                 reading.setServicePeriod(servicePeriod);
                                                 reading.setReadingTimestamp(ObjectHelpers.getCurrentTimestamp());
                                                 reading.setKwhUsed(presReadingInput.toString());
+                                                reading.setSolarKwhUsed(kwhExportConsumed + "");
                                                 reading.setDemandKwhUsed(demandReading.getText() != null  | !demandReading.getText().toString().isEmpty()  ? demandReading.getText().toString() : "0");
                                                 reading.setNotes(notes.getText().toString());
                                                 reading.setFieldStatus("OVERREADING");
@@ -568,7 +588,7 @@ public class ReadingFormActivity extends AppCompatActivity implements OnMapReady
                                                     }
                                                 }
                                                 new ReadAndBillDontPrint().execute(reading);
-                                                Toast.makeText(ReadingFormActivity.this, "Billed successfully", Toast.LENGTH_SHORT).show();
+                                                Toast.makeText(ReadingFormNetMeteredActivity.this, "Billed successfully", Toast.LENGTH_SHORT).show();
                                             }
                                         });
 
@@ -583,6 +603,7 @@ public class ReadingFormActivity extends AppCompatActivity implements OnMapReady
                                 reading.setServicePeriod(servicePeriod);
                                 reading.setReadingTimestamp(ObjectHelpers.getCurrentTimestamp());
                                 reading.setKwhUsed(presReadingInput.toString());
+                                reading.setSolarKwhUsed(kwhExportConsumed + "");
                                 reading.setDemandKwhUsed(demandReading.getText() != null  | !demandReading.getText().toString().isEmpty()  ? demandReading.getText().toString() : "0");
                                 reading.setNotes(notes.getText().toString());
                                 reading.setUploadStatus("UPLOADABLE");
@@ -597,17 +618,17 @@ public class ReadingFormActivity extends AppCompatActivity implements OnMapReady
                                     }
                                 }
                                 new ReadAndBillDontPrint().execute(reading);
-                                Toast.makeText(ReadingFormActivity.this, "Billed successfully", Toast.LENGTH_SHORT).show();
+                                Toast.makeText(ReadingFormNetMeteredActivity.this, "Billed successfully", Toast.LENGTH_SHORT).show();
                             }
 
                         }
                     } else {
-                        Toast.makeText(ReadingFormActivity.this, "No inputted present reading!", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(ReadingFormNetMeteredActivity.this, "No inputted present reading!", Toast.LENGTH_SHORT).show();
                     }
                 } catch (Exception e) {
                     Log.e("ERR_COMP", e.getMessage());
                     e.printStackTrace();
-                    Toast.makeText(ReadingFormActivity.this, "No inputted present reading!", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(ReadingFormNetMeteredActivity.this, "No inputted present reading!", Toast.LENGTH_SHORT).show();
                 }
             }
         });
@@ -652,6 +673,46 @@ public class ReadingFormActivity extends AppCompatActivity implements OnMapReady
                 } catch (Exception e) {
                     kwhUsed.setText("");
                     kwhUsed.setCompoundDrawablesWithIntrinsicBounds(null, null, null, null);
+                }
+            }
+
+            @Override
+            public void afterTextChanged(Editable editable) {
+
+            }
+        });
+
+        exportReading.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+
+            }
+
+            @Override
+            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+                try {
+                    if (charSequence != null) {
+                        Double kwh = Double.valueOf(ReadingHelpers.getKwhExportUsed(currentDpr, Double.valueOf(charSequence.toString())));
+
+                        if (kwh < 0) {
+                            kwhExportUsed.setCompoundDrawablesWithIntrinsicBounds(null, null, getResources().getDrawable(R.drawable.ic_baseline_error_outline_18), null);
+                            fieldStatus.setVisibility(View.GONE);
+                            fieldStatus.clearCheck();
+                            revealPhotoButton(false);
+                        } else {
+                            kwhExportUsed.setCompoundDrawablesWithIntrinsicBounds(null, null, null, null);
+                            fieldStatus.setVisibility(View.GONE);
+                            fieldStatus.clearCheck();
+                            revealPhotoButton(false);
+                        }
+                        kwhExportUsed.setText(ObjectHelpers.roundTwo(kwh));
+                    } else {
+                        kwhExportUsed.setText("");
+                        kwhExportUsed.setCompoundDrawablesWithIntrinsicBounds(null, null, null, null);
+                    }
+                } catch (Exception e) {
+                    kwhExportUsed.setText("");
+                    kwhExportUsed.setCompoundDrawablesWithIntrinsicBounds(null, null, null, null);
                 }
             }
 
@@ -871,8 +932,9 @@ public class ReadingFormActivity extends AppCompatActivity implements OnMapReady
             seniorCitizen.setText(currentDpr.getSeniorCitizen() != null ? currentDpr.getSeniorCitizen() : "No");
             currentArrears.setText(currentDpr.getArrearsLedger() != null ? ObjectHelpers.roundTwo(Double.valueOf(currentDpr.getArrearsLedger())) : "0.0");
             totalArrears.setText(currentDpr.getBalance() != null ? ObjectHelpers.roundTwo(Double.valueOf(currentDpr.getBalance())) : "0.0");
-            if (currentDpr.getChangeMeterAdditionalKwh() != null) {
-                additionalKwh.setText(currentDpr.getChangeMeterAdditionalKwh());
+            prevReadingExport.setText(currentDpr.getSolarKwhUsed() != null ? currentDpr.getSolarKwhUsed() : "0");
+            if (currentDpr.getSolarResidualCredit() != null) {
+                additionalKwh.setText(currentDpr.getSolarResidualCredit());
             } else {
                 additionalKwh.setText("0");
             }
@@ -1024,8 +1086,10 @@ public class ReadingFormActivity extends AppCompatActivity implements OnMapReady
             seniorCitizen.setText(currentDpr.getSeniorCitizen() != null ? currentDpr.getSeniorCitizen() : "No");
             currentArrears.setText(currentDpr.getArrearsLedger() != null ? ObjectHelpers.roundTwo(Double.valueOf(currentDpr.getArrearsLedger())) : "0.0");
             totalArrears.setText(currentDpr.getBalance() != null ? ObjectHelpers.roundTwo(Double.valueOf(currentDpr.getBalance())) : "0.0");
-            if (currentDpr.getChangeMeterAdditionalKwh() != null) {
-                additionalKwh.setText(currentDpr.getChangeMeterAdditionalKwh());
+            prevReadingExport.setText(currentDpr.getSolarKwhUsed() != null ? currentDpr.getSolarKwhUsed() : "0");
+
+            if (currentDpr.getSolarResidualCredit() != null) {
+                additionalKwh.setText(currentDpr.getSolarResidualCredit());
             } else {
                 additionalKwh.setText("0");
             }
@@ -1171,7 +1235,7 @@ public class ReadingFormActivity extends AppCompatActivity implements OnMapReady
                     if (mapboxMap != null) {
                         mapboxMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition), 1200);
                     } else {
-                        Toast.makeText(ReadingFormActivity.this, "Map is still loading, try again in a couple of seconds", Toast.LENGTH_LONG).show();
+                        Toast.makeText(ReadingFormNetMeteredActivity.this, "Map is still loading, try again in a couple of seconds", Toast.LENGTH_LONG).show();
                     }
                 }
             }
@@ -1215,11 +1279,11 @@ public class ReadingFormActivity extends AppCompatActivity implements OnMapReady
                             if (kwhConsumed == 0) {
                                 if (reading.getFieldStatus() != null && reading.getFieldStatus().equals("NOT IN USE")) {
                                     if (currentBill != null) {
-                                        currentBill = ReadingHelpers.generateRegularBill(currentBill, currentDpr, currentRate, kwhConsumed, Double.valueOf(reading.getKwhUsed()), (ObjectHelpers.checkNull(demandReading)), userId);
+                                        currentBill = ReadingHelpers.generateNetMeteredBill(currentBill, currentDpr, currentRate, kwhConsumed, Double.valueOf(reading.getKwhUsed()), (ObjectHelpers.checkNull(demandReading)), kwhExportConsumed, ObjectHelpers.checkNull(exportReading), userId);
 
                                         db.billsDao().updateAll(currentBill);
                                     } else {
-                                        currentBill = ReadingHelpers.generateRegularBill(null, currentDpr, currentRate, kwhConsumed, Double.valueOf(reading.getKwhUsed()), (ObjectHelpers.checkNull(demandReading)), userId);
+                                        currentBill = ReadingHelpers.generateNetMeteredBill(null, currentDpr, currentRate, kwhConsumed, Double.valueOf(reading.getKwhUsed()), (ObjectHelpers.checkNull(demandReading)), kwhExportConsumed, ObjectHelpers.checkNull(exportReading), userId);
 
                                         db.billsDao().insertAll(currentBill);
                                     }
@@ -1227,22 +1291,22 @@ public class ReadingFormActivity extends AppCompatActivity implements OnMapReady
                             } else if (kwhConsumed <= -1) {
                                 if (reading.getFieldStatus() != null && reading.getFieldStatus().equals("RESET")) {
                                     if (currentBill != null) {
-                                        currentBill = ReadingHelpers.generateRegularBill(currentBill, currentDpr, currentRate, kwhConsumed, Double.valueOf(reading.getKwhUsed()), (ObjectHelpers.checkNull(demandReading)), userId);
+                                        currentBill = ReadingHelpers.generateNetMeteredBill(currentBill, currentDpr, currentRate, kwhConsumed, Double.valueOf(reading.getKwhUsed()), (ObjectHelpers.checkNull(demandReading)), kwhExportConsumed, ObjectHelpers.checkNull(exportReading), userId);
 
                                         db.billsDao().updateAll(currentBill);
                                     } else {
-                                        currentBill = ReadingHelpers.generateRegularBill(null, currentDpr, currentRate, kwhConsumed, Double.valueOf(reading.getKwhUsed()), (ObjectHelpers.checkNull(demandReading)), userId);
+                                        currentBill = ReadingHelpers.generateNetMeteredBill(null, currentDpr, currentRate, kwhConsumed, Double.valueOf(reading.getKwhUsed()), (ObjectHelpers.checkNull(demandReading)), kwhExportConsumed, ObjectHelpers.checkNull(exportReading), userId);
 
                                         db.billsDao().insertAll(currentBill);
                                     }
                                 }
                             } else {
                                 if (currentBill != null) {
-                                    currentBill = ReadingHelpers.generateRegularBill(currentBill, currentDpr, currentRate, kwhConsumed, Double.valueOf(reading.getKwhUsed()), (ObjectHelpers.checkNull(demandReading)), userId);
+                                    currentBill = ReadingHelpers.generateNetMeteredBill(currentBill, currentDpr, currentRate, kwhConsumed, Double.valueOf(reading.getKwhUsed()), (ObjectHelpers.checkNull(demandReading)), kwhExportConsumed, ObjectHelpers.checkNull(exportReading), userId);
 
                                     db.billsDao().updateAll(currentBill);
                                 } else {
-                                    currentBill = ReadingHelpers.generateRegularBill(null, currentDpr, currentRate, kwhConsumed, Double.valueOf(reading.getKwhUsed()), (ObjectHelpers.checkNull(demandReading)), userId);
+                                    currentBill = ReadingHelpers.generateNetMeteredBill(null, currentDpr, currentRate, kwhConsumed, Double.valueOf(reading.getKwhUsed()), (ObjectHelpers.checkNull(demandReading)), kwhExportConsumed, ObjectHelpers.checkNull(exportReading), userId);
 
                                     db.billsDao().insertAll(currentBill);
                                 }
@@ -1272,7 +1336,7 @@ public class ReadingFormActivity extends AppCompatActivity implements OnMapReady
                         printViaEscPos(currentBill, currentRate, currentDpr, currentReading);
                     } catch (Exception e) {
                         Log.e("ERROR PRINTING", e.getMessage());
-                        Toast.makeText(ReadingFormActivity.this, "Error printing: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                        Toast.makeText(ReadingFormNetMeteredActivity.this, "Error printing: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                     }
                 }
 
@@ -1283,7 +1347,7 @@ public class ReadingFormActivity extends AppCompatActivity implements OnMapReady
                                     currentReading.getDemandKwhUsed() + "\t" +
                                     currentReading.getServicePeriod() + "\t",
                             servicePeriod,
-                            ReadingFormActivity.this);
+                            ReadingFormNetMeteredActivity.this);
                 } catch (Exception e) {
                     Log.e("ERROR_LOGGING_TEXT", e.getMessage());
                 }
@@ -1294,7 +1358,7 @@ public class ReadingFormActivity extends AppCompatActivity implements OnMapReady
                 finish();
 //                new FetchAccount().execute("next", currentDpr.getSequenceCode() != null ? (currentDpr.getSequenceCode().length() < 1 ? "001" : currentDpr.getSequenceCode()) : "001");
             } else {
-                AlertHelpers.showMessageDialog(ReadingFormActivity.this, "ERROR", "An error occurred while performing the reading. \n" + errors);
+                AlertHelpers.showMessageDialog(ReadingFormNetMeteredActivity.this, "ERROR", "An error occurred while performing the reading. \n" + errors);
             }
         }
     }
@@ -1334,11 +1398,11 @@ public class ReadingFormActivity extends AppCompatActivity implements OnMapReady
                             if (kwhConsumed == 0) {
                                 if (reading.getFieldStatus() != null && reading.getFieldStatus().equals("NOT IN USE")) {
                                     if (currentBill != null) {
-                                        currentBill = ReadingHelpers.generateRegularBill(currentBill, currentDpr, currentRate, kwhConsumed, Double.valueOf(reading.getKwhUsed()), (ObjectHelpers.checkNull(demandReading)), userId);
+                                        currentBill = ReadingHelpers.generateNetMeteredBill(currentBill, currentDpr, currentRate, kwhConsumed, Double.valueOf(reading.getKwhUsed()), (ObjectHelpers.checkNull(demandReading)), kwhExportConsumed, ObjectHelpers.checkNull(exportReading), userId);
 
                                         db.billsDao().updateAll(currentBill);
                                     } else {
-                                        currentBill = ReadingHelpers.generateRegularBill(null, currentDpr, currentRate, kwhConsumed, Double.valueOf(reading.getKwhUsed()), (ObjectHelpers.checkNull(demandReading)), userId);
+                                        currentBill = ReadingHelpers.generateNetMeteredBill(null, currentDpr, currentRate, kwhConsumed, Double.valueOf(reading.getKwhUsed()), (ObjectHelpers.checkNull(demandReading)), kwhExportConsumed, ObjectHelpers.checkNull(exportReading), userId);
 
                                         db.billsDao().insertAll(currentBill);
                                     }
@@ -1346,22 +1410,22 @@ public class ReadingFormActivity extends AppCompatActivity implements OnMapReady
                             } else if (kwhConsumed <= -1) {
                                 if (reading.getFieldStatus() != null && reading.getFieldStatus().equals("RESET")) {
                                     if (currentBill != null) {
-                                        currentBill = ReadingHelpers.generateRegularBill(currentBill, currentDpr, currentRate, kwhConsumed, Double.valueOf(reading.getKwhUsed()), (ObjectHelpers.checkNull(demandReading)), userId);
+                                        currentBill = ReadingHelpers.generateNetMeteredBill(currentBill, currentDpr, currentRate, kwhConsumed, Double.valueOf(reading.getKwhUsed()), (ObjectHelpers.checkNull(demandReading)), kwhExportConsumed, ObjectHelpers.checkNull(exportReading), userId);
 
                                         db.billsDao().updateAll(currentBill);
                                     } else {
-                                        currentBill = ReadingHelpers.generateRegularBill(null, currentDpr, currentRate, kwhConsumed, Double.valueOf(reading.getKwhUsed()), (ObjectHelpers.checkNull(demandReading)), userId);
+                                        currentBill = ReadingHelpers.generateNetMeteredBill(null, currentDpr, currentRate, kwhConsumed, Double.valueOf(reading.getKwhUsed()), (ObjectHelpers.checkNull(demandReading)), kwhExportConsumed, ObjectHelpers.checkNull(exportReading), userId);
 
                                         db.billsDao().insertAll(currentBill);
                                     }
                                 }
                             } else {
                                 if (currentBill != null) {
-                                    currentBill = ReadingHelpers.generateRegularBill(currentBill, currentDpr, currentRate, kwhConsumed, Double.valueOf(reading.getKwhUsed()), (ObjectHelpers.checkNull(demandReading)), userId);
+                                    currentBill = ReadingHelpers.generateNetMeteredBill(currentBill, currentDpr, currentRate, kwhConsumed, Double.valueOf(reading.getKwhUsed()), (ObjectHelpers.checkNull(demandReading)), kwhExportConsumed, ObjectHelpers.checkNull(exportReading), userId);
 
                                     db.billsDao().updateAll(currentBill);
                                 } else {
-                                    currentBill = ReadingHelpers.generateRegularBill(null, currentDpr, currentRate, kwhConsumed, Double.valueOf(reading.getKwhUsed()), (ObjectHelpers.checkNull(demandReading)), userId);
+                                    currentBill = ReadingHelpers.generateNetMeteredBill(null, currentDpr, currentRate, kwhConsumed, Double.valueOf(reading.getKwhUsed()), (ObjectHelpers.checkNull(demandReading)), kwhExportConsumed, ObjectHelpers.checkNull(exportReading), userId);
 
                                     db.billsDao().insertAll(currentBill);
                                 }
@@ -1391,7 +1455,7 @@ public class ReadingFormActivity extends AppCompatActivity implements OnMapReady
 //                        printViaEscPos(currentBill, currentRate, currentDpr, currentReading);
                     } catch (Exception e) {
                         Log.e("ERROR PRINTING", e.getMessage());
-                        Toast.makeText(ReadingFormActivity.this, "Error printing: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                        Toast.makeText(ReadingFormNetMeteredActivity.this, "Error printing: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                     }
                 }
 
@@ -1402,7 +1466,7 @@ public class ReadingFormActivity extends AppCompatActivity implements OnMapReady
                                     currentReading.getDemandKwhUsed() + "\t" +
                                     currentReading.getServicePeriod() + "\t",
                             servicePeriod,
-                            ReadingFormActivity.this);
+                            ReadingFormNetMeteredActivity.this);
                 } catch (Exception e) {
                     Log.e("ERROR_LOGGING_TEXT", e.getMessage());
                 }
@@ -1413,7 +1477,7 @@ public class ReadingFormActivity extends AppCompatActivity implements OnMapReady
                 finish();
 //                new FetchAccount().execute("next", currentDpr.getSequenceCode() != null ? (currentDpr.getSequenceCode().length() < 1 ? "001" : currentDpr.getSequenceCode()) : "001");
             } else {
-                AlertHelpers.showMessageDialog(ReadingFormActivity.this, "ERROR", "An error occurred while performing the reading. \n" + errors);
+                AlertHelpers.showMessageDialog(ReadingFormNetMeteredActivity.this, "ERROR", "An error occurred while performing the reading. \n" + errors);
             }
         }
     }
@@ -1526,7 +1590,7 @@ public class ReadingFormActivity extends AppCompatActivity implements OnMapReady
                             Log.e("TEST", file.getPath());
                             Bitmap bitmap = BitmapFactory.decodeFile(file.getPath());
                             Bitmap scaledBmp = Bitmap.createScaledBitmap(bitmap, bitmap.getWidth() / 8, bitmap.getHeight() / 8, true);
-                            ImageView imageView = new ImageView(ReadingFormActivity.this);
+                            ImageView imageView = new ImageView(ReadingFormNetMeteredActivity.this);
                             Constraints.LayoutParams layoutParams = new Constraints.LayoutParams(scaledBmp.getWidth(), scaledBmp.getHeight());
                             imageView.setLayoutParams(layoutParams);
                             imageView.setPadding(0, 5, 5, 0);
@@ -1536,7 +1600,7 @@ public class ReadingFormActivity extends AppCompatActivity implements OnMapReady
                             imageView.setOnLongClickListener(new View.OnLongClickListener() {
                                 @Override
                                 public boolean onLongClick(View v) {
-                                    PopupMenu popup = new PopupMenu(ReadingFormActivity.this, imageView);
+                                    PopupMenu popup = new PopupMenu(ReadingFormNetMeteredActivity.this, imageView);
                                     //inflating menu from xml resource
                                     popup.inflate(R.menu.image_menu);
                                     //adding click listener
@@ -1560,7 +1624,7 @@ public class ReadingFormActivity extends AppCompatActivity implements OnMapReady
                             });
                         } catch (Exception e) {
                             Log.e("ERR_GET_PHOTOS", e.getMessage());
-                            Toast.makeText(ReadingFormActivity.this, "An error occurred while fetching photos", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(ReadingFormNetMeteredActivity.this, "An error occurred while fetching photos", Toast.LENGTH_SHORT).show();
                         }
 
                     } else {
@@ -1581,7 +1645,7 @@ public class ReadingFormActivity extends AppCompatActivity implements OnMapReady
             Bitmap bitmap = BitmapFactory.decodeFile(imgFile.getPath());
             Bitmap scaledBmp = Bitmap.createScaledBitmap(bitmap, bitmap.getWidth()/8, bitmap.getHeight()/8, true);
 
-            ImageView imageView = new ImageView(ReadingFormActivity.this);
+            ImageView imageView = new ImageView(ReadingFormNetMeteredActivity.this);
             Constraints.LayoutParams layoutParams = new Constraints.LayoutParams(scaledBmp.getWidth(), scaledBmp.getHeight());
             imageView.setLayoutParams(layoutParams);
             imageView.setPadding(0, 5, 5, 0);
@@ -1594,7 +1658,7 @@ public class ReadingFormActivity extends AppCompatActivity implements OnMapReady
             imageView.setOnLongClickListener(new View.OnLongClickListener() {
                 @Override
                 public boolean onLongClick(View v) {
-                    PopupMenu popup = new PopupMenu(ReadingFormActivity.this, imageView);
+                    PopupMenu popup = new PopupMenu(ReadingFormNetMeteredActivity.this, imageView);
                     //inflating menu from xml resource
                     popup.inflate(R.menu.image_menu);
                     //adding click listener

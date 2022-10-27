@@ -116,13 +116,16 @@ public class DownloadedPreviousReadings {
     @ColumnInfo(name = "SolarKwhUsed")
     private String SolarKwhUsed;
 
+    @ColumnInfo(name = "SolarResidualCredit")
+    private String SolarResidualCredit;
+
     @ColumnInfo(name = "NetMetered")
     private String NetMetered;
 
     public DownloadedPreviousReadings() {
     }
 
-    public DownloadedPreviousReadings(@NonNull String id, String accountId, String serviceAccountName, String multiplier, String coreloss, String accountType, String accountStatus, String areaCode, String groupCode, String town, String barangay, String latitude, String longitude, String oldAccountNo, String kwhUsed, String servicePeriod, String sequenceCode, String status, String seniorCitizen, String evat5Percent, String ewt2Percent, String balance, String arrearsLedger, String meterSerial, String readingTimestamp, String arrearsTotal, String townFull, String barangayFull, String purok, String deposit, String organizationParentAccount, String changeMeterAdditionalKwh, String changeMeterStartKwh, String katasNgVat, String demandKwhUsed, String solarKwhUsed, String netMetered) {
+    public DownloadedPreviousReadings(@NonNull String id, String accountId, String serviceAccountName, String multiplier, String coreloss, String accountType, String accountStatus, String areaCode, String groupCode, String town, String barangay, String latitude, String longitude, String oldAccountNo, String kwhUsed, String servicePeriod, String sequenceCode, String status, String seniorCitizen, String evat5Percent, String ewt2Percent, String balance, String arrearsLedger, String meterSerial, String readingTimestamp, String arrearsTotal, String townFull, String barangayFull, String purok, String deposit, String organizationParentAccount, String changeMeterAdditionalKwh, String changeMeterStartKwh, String katasNgVat, String demandKwhUsed, String solarKwhUsed, String solarResidualCredit, String netMetered) {
         this.id = id;
         AccountId = accountId;
         ServiceAccountName = serviceAccountName;
@@ -159,6 +162,7 @@ public class DownloadedPreviousReadings {
         KatasNgVat = katasNgVat;
         DemandKwhUsed = demandKwhUsed;
         SolarKwhUsed = solarKwhUsed;
+        SolarResidualCredit = solarResidualCredit;
         NetMetered = netMetered;
     }
 
@@ -457,5 +461,13 @@ public class DownloadedPreviousReadings {
 
     public void setNetMetered(String netMetered) {
         NetMetered = netMetered;
+    }
+
+    public String getSolarResidualCredit() {
+        return SolarResidualCredit;
+    }
+
+    public void setSolarResidualCredit(String solarResidualCredit) {
+        SolarResidualCredit = solarResidualCredit;
     }
 }

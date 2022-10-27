@@ -82,7 +82,7 @@ public class ReadingListViewActivity extends AppCompatActivity {
         search = findViewById(R.id.searchList);
         downloadedPreviousReadingsList = new ArrayList<>();
         readingListViewRecyclerView = findViewById(R.id.readingListViewRecyclerView);
-        accountsListAdapter = new AccountsListAdapter(downloadedPreviousReadingsList, ReadingListViewActivity.this,  userId);
+        accountsListAdapter = new AccountsListAdapter(downloadedPreviousReadingsList, ReadingListViewActivity.this,  userId, true);
         readingListViewRecyclerView.setAdapter(accountsListAdapter);
         readingListViewRecyclerView.setLayoutManager(new LinearLayoutManager(ReadingListViewActivity.this));
         readingListTitle = findViewById(R.id.readingListTitle);

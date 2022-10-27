@@ -174,7 +174,7 @@ public class DownloadReadingListActivity extends AppCompatActivity {
 
                 downloadReadingListRecyclerview = findViewById(R.id.downloadReadingListRecyclerview);
                 downloadedPreviousReadingsList = new ArrayList<>();
-                accountsListAdapter = new AccountsListAdapter(downloadedPreviousReadingsList, DownloadReadingListActivity.this, userId);
+                accountsListAdapter = new AccountsListAdapter(downloadedPreviousReadingsList, DownloadReadingListActivity.this, userId, false);
                 downloadReadingListRecyclerview.setAdapter(accountsListAdapter);
                 downloadReadingListRecyclerview.setLayoutManager(new LinearLayoutManager(DownloadReadingListActivity.this));
 

@@ -183,7 +183,7 @@ public class ReadingConsoleActivity extends AppCompatActivity implements Permiss
         bottomSheetDialog.setContentView(view);
         closeBottomSheet = view.findViewById(R.id.closeBottomSheet);
         readingListBottomSheetRecyclerview = view.findViewById(R.id.readingListBottomSheetRecyclerview);
-        accountsListAdapter = new AccountsListAdapter(downloadedPreviousReadingsList, ReadingConsoleActivity.this, userId);
+        accountsListAdapter = new AccountsListAdapter(downloadedPreviousReadingsList, ReadingConsoleActivity.this, userId, true);
         readingListBottomSheetRecyclerview.setAdapter(accountsListAdapter);
         readingListBottomSheetRecyclerview.setLayoutManager(new LinearLayoutManager(ReadingConsoleActivity.this));
 
