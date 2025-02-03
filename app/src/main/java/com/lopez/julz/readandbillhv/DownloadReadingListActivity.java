@@ -139,7 +139,7 @@ public class DownloadReadingListActivity extends AppCompatActivity {
             townsAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
             selectTown.setAdapter(townsAdapter);
 
-            selectBillMonth.setAdapter(new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, ObjectHelpers.getPreviousMonths(4)));
+            selectBillMonth.setAdapter(new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, ObjectHelpers.getPreviousMonths(12)));
         } catch (Exception e) {
             Log.e("ERR_POP_SPINNRS", e.getMessage());
         }
@@ -192,7 +192,7 @@ public class DownloadReadingListActivity extends AppCompatActivity {
         progressBar.setVisibility(View.VISIBLE);
         fetchRates(period);
         try {
-            Call<List<DownloadedPreviousReadings>> downloadCall = requestPlaceHolder.downloadHvAccounts(town, period);
+            Call<List<DownloadedPreviousReadings>> downloadCall = requestPlaceHolder.downloadHvAccounts(town, period, userId);
 
             downloadCall.enqueue(new Callback<List<DownloadedPreviousReadings>>() {
                 @Override

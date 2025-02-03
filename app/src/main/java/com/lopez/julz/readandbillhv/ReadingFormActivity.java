@@ -1455,7 +1455,7 @@ public class ReadingFormActivity extends AppCompatActivity implements OnMapReady
             }
             if (pictureFile != null) {
                 Uri photoURI = FileProvider.getUriForFile(this,
-                        "com.lopez.julz.readandbill",
+                        "com.lopez.julz.readandbillhv",
                         pictureFile);
                 cameraIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI);
                 startActivityForResult(cameraIntent, REQUEST_PICTURE_CAPTURE);

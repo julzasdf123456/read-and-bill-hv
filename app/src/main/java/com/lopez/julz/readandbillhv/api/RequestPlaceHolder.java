@@ -78,7 +78,7 @@ public interface RequestPlaceHolder {
     Call<String> updateBapaSched(@Query("id") String id);
 
     @GET("download-hv-accounts")
-    Call<List<DownloadedPreviousReadings>> downloadHvAccounts(@Query("Town") String Town, @Query("ServicePeriod") String ServicePeriod);
+    Call<List<DownloadedPreviousReadings>> downloadHvAccounts(@Query("Town") String Town, @Query("ServicePeriod") String ServicePeriod, @Query("MeterReader") String MeterReader);
 
     /**
      * DISCONNECTION

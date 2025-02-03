@@ -46,6 +46,9 @@ public interface DownloadedPreviousReadingsDao {
     @Query("SELECT * FROM DownloadedPreviousReadings d WHERE d.AccountId NOT IN (SELECT AccountNumber FROM Readings WHERE ServicePeriod=d.ServicePeriod) ORDER BY OldAccountNo")
     List<DownloadedPreviousReadings> getAllUnread();
 
+    @Query("SELECT * FROM DownloadedPreviousReadings d WHERE d.AccountId IN (SELECT AccountNumber FROM Readings WHERE ServicePeriod=d.ServicePeriod AND UploadStatus = 'UPLOADABLE') ORDER BY OldAccountNo")
+    List<DownloadedPreviousReadings> getAllRead();
+
     @Query("SELECT * FROM DownloadedPreviousReadings d WHERE (d.ServiceAccountName LIKE :regex OR d.MeterSerial LIKE :regex OR d.OldAccountNo LIKE :regex) AND " +
             " d.AccountId NOT IN (SELECT AccountNumber FROM Readings WHERE ServicePeriod=d.ServicePeriod)" +
             " ORDER BY ServiceAccountName")

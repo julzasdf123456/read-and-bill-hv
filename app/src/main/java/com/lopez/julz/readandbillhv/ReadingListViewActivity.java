@@ -11,11 +11,13 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.room.Room;
 
 import android.Manifest;
+import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
+import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.EditText;
 import android.widget.TextView;
@@ -88,8 +90,6 @@ public class ReadingListViewActivity extends AppCompatActivity {
         readingListTitle = findViewById(R.id.readingListTitle);
         readingListTitle.setText("Unread HV and Net Metered Accounts");
 
-        new GetReadingList().execute();
-
 //        search.setRawInputType(Configuration.KEYBOARD_QWERTY);
 
         search.addTextChangedListener(new TextWatcher() {
@@ -111,9 +111,25 @@ public class ReadingListViewActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onResume() {
+        super.onResume();
+        new GetReadingList().execute();
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.reading_list_menu, menu);
+        return super.onCreateOptionsMenu(menu);
+    }
+
+    @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         if (item.getItemId() == android.R.id.home) {
             finish();
+        } else if (item.getItemId() == R.id.history) {
+            Intent intent = new Intent(this, BilledActivity.class);
+            intent.putExtra("USERID", userId);
+            startActivity(intent);
         }
         return super.onOptionsItemSelected(item);
     }

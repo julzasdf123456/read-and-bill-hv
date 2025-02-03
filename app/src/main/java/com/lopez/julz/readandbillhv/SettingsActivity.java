@@ -101,7 +101,6 @@ public class SettingsActivity extends AppCompatActivity {
 
             // servers
             List<String> servers = new ArrayList<>();
-            servers.add("192.168.10.161");
             servers.add("192.168.100.10");
             servers.add("192.168.100.20");
             servers.add("192.168.100.30");
@@ -116,6 +115,7 @@ public class SettingsActivity extends AppCompatActivity {
             servers.add("192.168.110.94");
             servers.add("203.177.135.179:8443");
             servers.add("192.168.10.161");
+            servers.add("192.168.1.8");
             ArrayAdapter serversAdapter = new ArrayAdapter(this, android.R.layout.simple_spinner_item, servers.toArray());
             serversAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
             serverSelect.setAdapter(serversAdapter);
